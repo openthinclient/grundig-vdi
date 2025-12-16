@@ -1,0 +1,95 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:             grundig-mount
+# Required-Start:       $local_fs $remote_fs $syslog
+# Required-Stop:        $local_fs $remote_fs $syslog
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    Mount/unmount Grundig devices
+### END INIT INFO
+
+BASE_MOUNT_DIR="/media/grundig/"
+
+mount_dev()
+{
+    DEVICE="/dev/${DEVBASE}"
+    # See if this drive is already mounted, and if so where
+    MOUNT_POINT=$(/bin/mount | /bin/grep ${DEVICE} | /usr/bin/awk '{ print $3 }')
+
+    if [[ -n ${MOUNT_POINT} ]]; then
+        echo "Warning: ${DEVICE} is already mounted at ${MOUNT_POINT}"
+        exit 1
+    fi
+
+    # Get info for this drive: $ID_FS_LABEL, $ID_FS_UUID, and $ID_FS_TYPE
+    eval $(/sbin/blkid -o udev ${DEVICE})
+
+    MOUNT_POINT="${BASE_MOUNT_DIR}${DEVBASE}"
+
+    echo "Mount point: ${MOUNT_POINT}"
+
+    /bin/mkdir -p ${MOUNT_POINT}
+
+    # Global mount options
+    OPTS="rw,relatime"
+
+    # File system type specific mount options
+    if [[ ${ID_FS_TYPE} == "vfat" ]]; then
+        OPTS+=",users,gid=100,umask=000,shortname=mixed,utf8=1,flush"
+    fi
+
+    if ! /bin/mount -o ${OPTS} ${DEVICE} ${MOUNT_POINT}; then
+        echo "Error mounting ${DEVICE} (status = $?)"
+        /bin/rmdir ${MOUNT_POINT}
+        exit 1
+    fi
+
+    echo "**** Mounted ${DEVICE} at ${MOUNT_POINT} ****"
+}
+
+unmount_dev()
+{
+    DEVICE="/dev/${DEVBASE}"
+    # See if this drive is already mounted, and if so where
+    MOUNT_POINT=$(/bin/mount | /bin/grep ${DEVICE} | /usr/bin/awk '{ print $3 }')
+
+    if [[ -z ${MOUNT_POINT} ]]; then
+        echo "Warning: ${DEVICE} is not mounted"
+    elif [[ ${MOUNT_POINT} == *${BASE_MOUNT_DIR}* ]]; then
+        /bin/umount -f ${MOUNT_POINT}
+        echo "**** Unmounted ${DEVICE} from ${MOUNT_POINT} ****"
+    fi
+}
+
+do_for_each()
+{
+    DIGTA_DISKS=$(/bin/lsblk -l -o NAME,TYPE,VENDOR | /bin/grep disk | /bin/grep -i digta | /usr/bin/awk '{ print $1 }')
+    for disk in $DIGTA_DISKS; do
+        DIGTA_PARTS=$(/bin/lsblk -l -o NAME,TYPE | /bin/grep part | /bin/grep ${disk} | /usr/bin/awk '{ print $1 }')
+        [ -z "$DIGTA_PARTS" ] && DIGTA_PARTS=$disk
+        for part in $DIGTA_PARTS; do
+            DEVBASE=$part
+            $1
+        done
+    done
+}
+
+ACTION=$1
+
+case "${ACTION}" in
+    start)
+        do_for_each mount_dev
+        ;;
+    stop)
+        do_for_each unmount_dev
+        ;;
+    add)
+        DEVBASE=$2
+        mount_dev
+        ;;
+    remove)
+        DEVBASE=$2
+        unmount_dev
+        ;;
+esac

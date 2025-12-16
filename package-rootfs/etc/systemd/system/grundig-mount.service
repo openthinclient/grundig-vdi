@@ -1,0 +1,11 @@
+[Unit]
+Description=Grundig Mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/grundig-vdi/grundig-mount start
+ExecStop=/opt/grundig-vdi/grundig-mount stop
+
+[Install]
+WantedBy=multi-user.target

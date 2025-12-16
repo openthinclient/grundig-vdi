@@ -1,0 +1,11 @@
+Source: grundig-vdi
+Section: unknown
+Priority: optional
+Maintainer: Development Team <devteam@openthinclient.com>
+
+Package: grundig-vdi
+Architecture: amd64
+Description: Grundig VDI Plugin
+ Enables support for special buttons of Grundig devices in VDI sessions.
+ .
+ This package will be installed automatically as a dependency of supported VDI clients.

@@ -1,0 +1,2 @@
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ATTRS{idVendor}=="15d8", ACTION=="add", RUN+="/opt/grundig-vdi/grundig-mount add %k"
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="remove", RUN+="/opt/grundig-vdi/grundig-mount remove %k"
